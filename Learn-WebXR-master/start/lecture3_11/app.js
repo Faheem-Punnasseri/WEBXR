@@ -39,6 +39,7 @@ class App {
         this.controls.update();
 
         this.stats = new Stats();
+        document.body.appendChild(this.stats.dom);
 
         this.origin = new THREE.Vector3();
         this.euler = new THREE.Euler();
@@ -61,6 +62,7 @@ class App {
         loader.load(
             // resource URL
             `knight2.glb`,
+
             // called when the resource is loaded
             function(gltf) {
                 const object = gltf.scene.children[5];
@@ -87,6 +89,7 @@ class App {
 
                 self.knight.action = 'Dance';
                 const scale = 0.003;
+
                 self.knight.object.scale.set(scale, scale, scale);
 
                 self.loadingBar.visible = false;
@@ -111,7 +114,7 @@ class App {
     createUI() {
 
         const config = {
-            panelSize: { width: 0.2, height: 0.05 },
+            panelSize: { width: 0.15, height: 0.038 },
             height: 128,
             info: { type: "text" }
         }
@@ -131,7 +134,7 @@ class App {
         let controller, controller1;
 
         function onSessionStart() {
-            self.ui.mesh.position.set(0, -0.2, -0.3);
+            self.ui.mesh.position.set(0, -0.15, -0.3);
             self.camera.add(self.ui.mesh);
         }
 
@@ -139,62 +142,80 @@ class App {
             self.camera.remove(self.ui.mesh);
         }
 
-        const btn = new ARButton(this.renderer, { onSessionStart, onSessionEnd });
+        const btn = new ARButton(this.renderer, { onSessionStart, onSessionEnd }); //, sessionInit: { optionalFeatures: [ 'dom-overlay' ], domOverlay: { root: document.body } } } );
 
-        //Add gestures here
+
         this.gestures = new ControllerGestures(this.renderer);
         this.gestures.addEventListener('tap', (ev) => {
-            console.log("Once Tapped");
-            self.ui.updateElement('info', 'Tapped');
+            //console.log( 'tap' ); 
+            self.ui.updateElement('info', 'tap');
 
             if (!self.knight.object.visible) {
                 self.knight.object.visible = true;
                 self.knight.object.position.set(0, -0.3, -0.5).add(ev.position);
+
+
                 self.scene.add(self.knight.object);
             }
         });
-        this.gestures.addEventListener('swipe', (ev) => {
-            console.log(ev);
-            self.ui.updateElement('info', 'Swipe & Hide ${ev.direction}');
+        this.gestures.addEventListener('doubletap', (ev) => {
+            //console.log( 'doubletap'); 
+            self.ui.updateElement('info', 'doubletap');
+        });
+        this.gestures.addEventListener('press', (ev) => {
+            //console.log( 'press' );    
+            self.ui.updateElement('info', 'press');
 
+
+
+
+
+
+
+
+
+        });
+
+        this.gestures.addEventListener('pan', (ev) => {
+            //console.log( ev );
+            if (ev.initialise !== undefined) {
+                self.startPosition = self.knight.object.position.clone();
+            } else {
+                const pos = self.startPosition.clone().add(ev.delta.multiplyScalar(3));
+                self.knight.object.position.copy(pos);
+                self.ui.updateElement('info', `pan x:${ev.delta.x.toFixed(3)}, y:${ev.delta.y.toFixed(3)}, x:${ev.delta.z.toFixed(3)}`);
+            }
+        });
+        this.gestures.addEventListener('swipe', (ev) => {
+            //console.log( ev );   
+            self.ui.updateElement('info', `swipe ${ev.direction}`);
             if (self.knight.object.visible) {
                 self.knight.object.visible = false;
                 self.scene.remove(self.knight.object);
             }
         });
 
-        this.gestures.addEventListener('pan', (ev) => {
-            console.log(ev);
-            if (ev.initialise !== undefined) {
-                self.startPosition = self.kniight.object.position.clone();
-            } else {
-                const pos = self.startPosition.clone().add(
-                    ev.delta.multiplyScalar(3));
-                self.knight.object.position.copy(pos);
-                self.ui.updateElement('info', 'pan x:${ev.delta.x.toFixed(3)} y: $ { ev.delta.y.toFixed(3)} Z:${ev.delta.z.toFixed}');
-            }
-        });
-
         this.gestures.addEventListener('pinch', (ev) => {
-            console.log(ev);
-            if (ev.intialise !== undefined) {
+            //console.log( ev );  
+            if (ev.initialise !== undefined) {
                 self.startScale = self.knight.object.scale.clone();
             } else {
                 const scale = self.startScale.clone().multiplyScalar(ev.scale);
                 self.knight.object.scale.copy(scale);
-                self.ui.updateElement('info', 'pinch delta : ${ev.delta.tofixed(3)} scale:${ev.scale.toFixed(2)}');
+                self.ui.updateElement('info', `pinch delta:${ev.delta.toFixed(3)} scale:${ev.scale.toFixed(2)}`);
             }
         });
 
         this.gestures.addEventListener('rotate', (ev) => {
-            console.log(ev);
+            //      sconsole.log( ev ); 
             if (ev.initialise !== undefined) {
                 self.startQuaternion = self.knight.object.quaternion.clone();
             } else {
+                self.knight.object.quaternion.copy(self.startQuaternion);
                 self.knight.object.rotateY(ev.theta);
-                self.ui.updateElement('info', 'rotate $(ev.theta.toFixed(3))');
+                self.ui.updateElement('info', `rotate ${ev.theta.toFixed(3)}`);
             }
-        })
+        });
 
         this.renderer.setAnimationLoop(this.render.bind(this));
     }
